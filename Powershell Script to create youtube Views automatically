@@ -13,3 +13,63 @@ While ($ii -ne ($arrURL.count +1))
     Start-Sleep $Sleeptimer
     TASKKILL /IM chrome.exe /F        
 }
+
+
+###############  Below script would help u in creatin youtube views and also delete cookies or etc set at IE before hand ###########
+function Clear-IECachedData
+{
+	[CmdletBinding(ConfirmImpact = 'None')]
+	param
+	(
+		[Parameter(Mandatory = $false,
+				   HelpMessage = ' Delete Temporary Internet Files')]
+		[switch]
+		$TempIEFiles,
+		[Parameter(HelpMessage = 'Delete Cookies')]
+		[switch]
+		$Cookies,
+		[Parameter(HelpMessage = 'Delete History')]
+		[switch]
+		$History,
+		[Parameter(HelpMessage = 'Delete Form Data')]
+		[switch]
+		$FormData,
+		[Parameter(HelpMessage = 'Delete Passwords')]
+		[switch]
+		$Passwords,
+		[Parameter(HelpMessage = 'Delete All')]
+		[switch]
+		$All,
+		[Parameter(HelpMessage = 'Delete Files and Settings Stored by Add-Ons')]
+		[switch]
+		$AddOnSettings
+	)
+	if ($TempIEFiles) { RunDll32.exe InetCpl.cpl, ClearMyTracksByProcess 8}
+	if ($Cookies) { RunDll32.exe InetCpl.cpl, ClearMyTracksByProcess 2}
+	if ($History) { RunDll32.exe InetCpl.cpl, ClearMyTracksByProcess 1}
+	if ($FormData) { RunDll32.exe InetCpl.cpl, ClearMyTracksByProcess 16}
+	if ($Passwords) { RunDll32.exe InetCpl.cpl, ClearMyTracksByProcess 32 }
+	if ($All) { RunDll32.exe InetCpl.cpl, ClearMyTracksByProcess 255}
+	if ($AddOnSettings) { RunDll32.exe InetCpl.cpl, ClearMyTracksByProcess 4351 }
+}
+
+Clear-IECachedData -Cookies
+
+$Rotator=new-object -com internetexplorer.application
+$Rotator.visible=$true
+$Sleeptimer = 19
+#$arrURL = @("https://www.youtube.com/watch?v=_v6JoIKIOgs","https://www.youtube.com/watch?v=F6DH05OVmyE","https://www.youtube.com/watch?v=pQ-GNT2eRi0","https://www.youtube.com/watch?v=-HagIA3fVck")
+$arrURL = @("https://www.youtube.com/watch?v=_v6JoIKIOgs","https://www.youtube.com/watch?v=F6DH05OVmyE","https://www.youtube.com/watch?v=e2tQTGKy4EU&t=250s","https://www.youtube.com/watch?v=zD7F23Npjh8&t=246s","https://www.youtube.com/watch?v=09cnfv0W9Uc&t=6s","https://www.youtube.com/watch?v=qMUm3WSuJkU&t=265s","https://www.youtube.com/watch?v=lVPAKno5eLU&t=219s","https://www.youtube.com/watch?v=X0P3sfkLJl0","https://www.youtube.com/watch?v=9OsH4tCJ3BY&t=552s","https://www.youtube.com/watch?v=Q07aOtRaURs","https://www.youtube.com/watch?v=ZGf3oLeciAE&t=5s","https://www.youtube.com/watch?v=FvY05ZO5wjs","https://www.youtube.com/watch?v=Ze8_y9Gquk8&t=5s","https://www.youtube.com/watch?v=pQ-GNT2eRi0","https://www.youtube.com/watch?v=-HagIA3fVck")
+$ii=0
+
+While ($ii -ne ($arrURL.count +1)) {
+    $Rotator.navigate2($arrURL[$ii])
+    $ii += 1
+    if ($ii -eq $arrURL.count){
+        $ii = 0
+    }
+    Start-Sleep $Sleeptimer
+    Clear-IECachedData
+}
+
+
