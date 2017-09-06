@@ -1,0 +1,15 @@
+$Sleeptimer = 30
+$arrURL = @("https://www.youtube.com/watch?v=Q07aOtRaURs","https://www.youtube.com/watch?v=ZGf3oLeciAE&t=5s","https://www.youtube.com/watch?v=FvY05ZO5wjs","https://www.youtube.com/watch?v=Ze8_y9Gquk8&t=5s","https://www.youtube.com/watch?v=pQ-GNT2eRi0","https://www.youtube.com/watch?v=-HagIA3fVck","https://www.youtube.com/watch?v=_v6JoIKIOgs","https://www.youtube.com/watch?v=F6DH05OVmyE","https://www.youtube.com/watch?v=e2tQTGKy4EU&t=250s","https://www.youtube.com/watch?v=zD7F23Npjh8&t=246s","https://www.youtube.com/watch?v=09cnfv0W9Uc&t=6s","https://www.youtube.com/watch?v=qMUm3WSuJkU&t=265s","https://www.youtube.com/watch?v=lVPAKno5eLU&t=219s","https://www.youtube.com/watch?v=X0P3sfkLJl0","https://www.youtube.com/watch?v=9OsH4tCJ3BY&t=552s")
+$ii=0
+
+While ($ii -ne ($arrURL.count +1)) 
+{
+    Start-Process "chrome.exe" $arrURL[$ii]
+    
+    $ii += 1
+    if ($ii -eq $arrURL.count){
+        $ii = 0
+    }
+    Start-Sleep $Sleeptimer
+    TASKKILL /IM chrome.exe /F        
+}Script to create Yi
