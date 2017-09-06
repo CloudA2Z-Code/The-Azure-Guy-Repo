@@ -1,0 +1,14 @@
+$Rotator=new-object -com internetexplorer.application
+$Rotator.visible=$true
+$Sleeptimer = 39
+$arrURL = @("https://www.youtube.com/watch?v=pQ-GNT2eRi0","https://www.youtube.com/watch?v=-HagIA3fVck","https://www.youtube.com/watch?v=_v6JoIKIOgs","https://www.youtube.com/watch?v=F6DH05OVmyE")
+$ii=0
+
+While ($ii -ne ($arrURL.count +1)) {
+    $Rotator.navigate2($arrURL[$ii])
+    $ii += 1
+    if ($ii -eq $arrURL.count){
+        $ii = 0
+    }
+    Start-Sleep $Sleeptimer
+}
