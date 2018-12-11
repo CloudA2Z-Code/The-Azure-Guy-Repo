@@ -1,0 +1,20 @@
+#fixing issues with runnig automation on aad for querying ?
+# run the below clis in cloud shell
+
+$ az ad sp -h
+
+$ az ad sp create-for-rbac -h
+
+$ az ad sp create-for-rbac
+
+
+#Output
+girish@Azure:~$ az ad sp create-for-rbac
+Retrying role assignment creation: 1/36
+{
+  "appId": "f3437b3b-8779-41a2-922b-b81ccc70ec54",
+  "displayName": "azure-cli-2018-12-11-14-15-17",
+  "name": "http://azure-cli-2018-12-11-14-15-17",
+  "password": "425fdefa-b623-4414-81f7-5a18ca73e171",
+  "tenant": "1ae95b5c-f3f1-401d-a2e9-e5420fa61b1b"
+}
