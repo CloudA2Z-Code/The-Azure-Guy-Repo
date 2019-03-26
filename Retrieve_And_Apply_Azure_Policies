@@ -1,0 +1,14 @@
+Login-AzureRmAccount
+
+$rg = Get-AzureRmResourceGroup -Name "Your Resource Group"
+
+$PolicyDefinitions = Get-AzureRmPolicyDefinition | Where-Object{$_.Properties.displayName -like '*Deploy VM extension to audit that Windows VMs have the password complexity setting enabled*'}
+
+$PolicyDefinitions
+
+$PolicyDefinitions = $PolicyDefinitions[1]
+
+New-AzureRmPolicyAssignment -PolicyDefinition $PolicyDefinitions `
+                            -Scope $rg.ResourceId `
+                            -Name "Deploy VM extension to audit that Windows VMs have the password" `
+                            -Description "TestingBuiltInPolicy-desc"
