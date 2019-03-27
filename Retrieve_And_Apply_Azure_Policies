@@ -12,3 +12,6 @@ New-AzureRmPolicyAssignment -PolicyDefinition $PolicyDefinitions `
                             -Scope $rg.ResourceId `
                             -Name "Deploy VM extension to audit that Windows VMs have the password" `
                             -Description "TestingBuiltInPolicy-desc"
+                            
+# Fetch the applied policy assigned on RG 
+Get-AzureRmPolicyAssignment -Scope $rg.ResourceId
