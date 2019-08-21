@@ -1,0 +1,41 @@
+using System;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Host;
+
+namespace AzFuncFetchLogs
+{
+    public static class Function1
+    {
+
+        private const string URL = "https://api.applicationinsights.io/v1/apps/{0}/{1}/{2}/{3}";
+        [FunctionName("Function1")]
+        public static void Run([TimerTrigger("0 */5 * * * *")]TimerInfo myTimer, TraceWriter log)
+        {
+            log.Info($"C# Timer trigger function executed at: {DateTime.Now}");
+            
+            string queryType = "metrics";
+            string queryPath = "requests";
+            string parameterString = "duration?timespan=2019-08-17%2F2019-08-18&interval=PT30M&aggregation=avg&top=10";
+            string res = GetTelemetry("aa****************0532d3", "h8ma0vmnu*************fkkn0", queryType, queryPath, parameterString);
+        }
+
+        public static string GetTelemetry(string appid, string apikey, string queryType, string queryPath, string parameterString)
+        {
+            HttpClient client = new HttpClient();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            client.DefaultRequestHeaders.Add("x-api-key", apikey);
+            var req = string.Format(URL, appid, queryType, queryPath, parameterString);           
+            HttpResponseMessage response = client.GetAsync(req).Result;
+            if (response.IsSuccessStatusCode)
+            {
+                return response.Content.ReadAsStringAsync().Result;
+            }
+            else
+            {
+                return response.ReasonPhrase;
+            }
+        }
+    }
+}
