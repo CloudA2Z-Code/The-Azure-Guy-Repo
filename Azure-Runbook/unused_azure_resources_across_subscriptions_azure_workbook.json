@@ -1,0 +1,163 @@
+
+// Note - Uncomment to run each command pallete seprately
+
+// 1 - Resource Groups - Resource Groups without resources (including hidden types resources).
+ResourceContainers
+| where type == "microsoft.resources/subscriptions/resourcegroups"
+| extend rgAndSub = strcat(resourceGroup, "--", subscriptionId)
+| join kind=leftouter (
+    Resources
+    | extend rgAndSub = strcat(resourceGroup, "--", subscriptionId)
+    | summarize count() by rgAndSub
+) on rgAndSub
+| where isnull(count_)
+| extend Details = pack_all()
+| project Resource_Groups=name, subscriptionId, Resource=id, location, tags ,Details
+
+// 2 - Storage - Managed Disks with 'Unattached' state and not related to Azure Site Recovery.
+resources
+| where type has "microsoft.compute/disks"
+| extend diskState = tostring(properties.diskState)
+| where managedBy == ""
+| where not(name endswith "-ASRReplica" or name startswith "ms-asr-" or name startswith "asrseeddisk-")
+| extend Details = pack_all()
+| project Resource_name=strcat("Storages-> ", name), id, resourceGroup, diskState, sku.name, properties.diskSizeGB, location, tags, subscriptionId, Details
+
+// 3 - Networking - Public IPs that are not attached to any resource (VM, NAT Gateway, Load Balancer, Application Gateway, Public IP Prefix, etc.).
+resources
+| where type == "microsoft.network/publicipaddresses"
+| where properties.ipConfiguration == "" and properties.natGateway == "" and properties.publicIPPrefix == ""
+| extend Details = pack_all()
+| project Resource_name=strcat("Public IPs-> ", name), Resource=id, resourceGroup, location, subscriptionId, sku.name, tags ,Details
+
+// 4 - App Service Plans - App Service plans without hosting Apps.
+resources
+| where type =~ "microsoft.web/serverfarms"
+| where properties.numberOfSites == 0
+| extend Details = pack_all()
+| project App_Service_Plans=name, Resource=id, resourceGroup, location, subscriptionId, Sku=sku.name, Tier=sku.tier, tags ,Details
+
+// 5 - Certificates - Expired certificates.
+resources
+| where type == 'microsoft.web/certificates'
+| extend expiresOn = todatetime(properties.expirationDate)
+| where expiresOn <= now()
+| extend Details = pack_all()
+| project Certificates=strcat("Certificates-> ", name), Resource=id, resourceGroup, location, subscriptionId, tags, Details
+
+
+// 6 - API Connections - API Connections that not related to any Logic App.
+resources
+| where type =~ 'Microsoft.Web/connections'
+| project resourceId = id , apiName = name, subscriptionId, resourceGroup, tags, location
+| join kind = leftouter (
+    resources
+    | where type == 'microsoft.logic/workflows'
+    | extend resourceGroup, location, subscriptionId, properties
+    | extend var_json = properties["parameters"]["$connections"]["value"]
+	| mvexpand var_connection = var_json
+    | where notnull(var_connection)
+    | extend connectionId = extract("connectionId\":\"(.*?)\"", 1, tostring(var_connection))
+    | project connectionId, name
+    )
+    on $left.resourceId == $right.connectionId
+| where connectionId == ""
+| extend Details = pack_all()
+| project API_Connections=apiName, resourceId, resourceGroup, location, subscriptionId, tags, Details
+
+// 7 - Network Interfaces - Network Interfaces that are not attached to any resource.
+resources
+| where type has "microsoft.network/networkinterfaces"
+| where isnull(properties.privateEndpoint)
+| where isnull(properties.privateLinkService)
+| where properties.hostedWorkloads == "[]"
+| where properties !has 'virtualmachine'
+| extend Details = pack_all()
+| project Resource_name=strcat("Network Interfaces-> ", name), Resource=id, resourceGroup, location, tags, subscriptionId, Details
+
+
+// 8 - Network Security Groups - Network Security Group (NSGs) that are not attached to any network interface or subnet.
+resources
+| where type == "microsoft.network/networksecuritygroups" and isnull(properties.networkInterfaces) and isnull(properties.subnets)
+| extend Details = pack_all()
+| project subscriptionId, Resource=id, resourceGroup, location, tags, Details
+
+// 9 - Route Tables - Route Tables that not attached to any subnet.
+resources
+| where type == "microsoft.network/routetables"
+| where isnull(properties.subnets)
+| extend Details = pack_all()
+| project subscriptionId, Resource=id, resourceGroup, location, tags, Details
+
+// 10 - Load Balancers - Load Balancers with empty backend address pools.
+resources
+| where type == "microsoft.network/loadbalancers"
+| where properties.backendAddressPools == "[]"
+| extend Details = pack_all()
+| project subscriptionId, Resource=id, resourceGroup, location, tags, Details
+
+// 11 - Front Door WAF Policy - Front Door WAF Policy without associations. (Frontend Endpoint Links, Security Policy Links)
+resources
+| where type == "microsoft.network/frontdoorwebapplicationfirewallpolicies"
+| where properties.frontendEndpointLinks== "[]" and properties.securityPolicyLinks == "[]"
+| extend Details = pack_all()
+| project Resource=id, resourceGroup, location, subscriptionId, Sku=sku.name, tags, Details
+
+// 12 - Traffic Manager Profiles - Traffic Manager without endpoints.
+resources
+| where type == "microsoft.network/trafficmanagerprofiles"
+| where properties.endpoints == "[]"
+| extend Details = pack_all()
+| project Resource=id, resourceGroup, location, subscriptionId, tags, Details
+
+// 13 - Application Gateways - Application Gateways without backend targets. (in backend pools)
+resources
+| where type =~ 'microsoft.network/applicationgateways'
+| extend backendPoolsCount = array_length(properties.backendAddressPools),SKUName= tostring(properties.sku.name), SKUTier= tostring(properties.sku.tier),SKUCapacity=properties.sku.capacity,backendPools=properties.backendAddressPools , AppGwId = tostring(id)
+| project AppGwId, resourceGroup, location, subscriptionId, tags, name, SKUName, SKUTier, SKUCapacity
+| join (
+    resources
+    | where type =~ 'microsoft.network/applicationgateways'
+    | mvexpand backendPools = properties.backendAddressPools
+    | extend backendIPCount = array_length(backendPools.properties.backendIPConfigurations)
+    | extend backendAddressesCount = array_length(backendPools.properties.backendAddresses)
+    | extend backendPoolName  = backendPools.properties.backendAddressPools.name
+    | extend AppGwId = tostring(id)
+    | summarize backendIPCount = sum(backendIPCount) ,backendAddressesCount=sum(backendAddressesCount) by AppGwId
+) on AppGwId
+| project-away AppGwId1
+| where  (backendIPCount == 0 or isempty(backendIPCount)) and (backendAddressesCount==0 or isempty(backendAddressesCount))
+| extend Details = pack_all()
+| project Resource=AppGwId, resourceGroup, location, subscriptionId, SKUTier, SKUCapacity, tags, Details
+
+// 14 - Virtual Networks - Virtual Networks (VNETs) without subnets.
+resources
+| where type == "microsoft.network/virtualnetworks"
+| where properties.subnets == "[]"
+| extend Details = pack_all()
+| project subscriptionId, Resource=id, resourceGroup, location, tags, Details
+
+// 15 - Subnets - Subnets without Connected Devices. (Empty Subnets)
+resources
+| where type =~ "microsoft.network/virtualnetworks"
+| extend subnet = properties.subnets
+| mv-expand subnet
+| extend Details = pack_all()
+| where isnull(subnet.properties.ipConfigurations)
+| project VNET=name, subscriptionId, Resource=subnet.id, VNetName=name, SubnetName=tostring(subnet.name) ,resourceGroup, location, Details
+
+// 16 - NAT Gateways - NAT Gateways that not attached to any subnet.
+resources
+| where type == "microsoft.network/natgateways"
+| where isnull(properties.subnets)
+| extend Details = pack_all()
+| project NAT=name, subscriptionId, Resource=id, resourceGroup, location, tostring(sku.name), tostring(sku.tier), tags, Details
+
+// IP Groups - IP Groups that not attached to any Azure Firewall.
+resources
+| where type == "microsoft.network/ipgroups"
+| where properties.firewalls == "[]" and properties.firewallPolicies == "[]"
+| extend Details = pack_all()
+| project IP_Group=name, subscriptionId, Resource=id, resourceGroup, location, tags, Details
+
+// in progress..
